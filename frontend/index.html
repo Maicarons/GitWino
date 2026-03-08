@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitWino - Git 仓库历史查询</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/layui/2.12.0/css/layui.min.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/layui/2.12.0/layui.min.js"></script>
+</head>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .layui-container {
+            max-width: 900px;
+        }
+        .layui-card {
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .layui-card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            padding: 20px;
+        }
+        .layui-card-header h2 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .result-card {
+            margin-top: 20px;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stat-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            border-left: 4px solid #667eea;
+        }
+        .stat-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        .stat-icon {
+            font-size: 20px;
+            margin-right: 10px;
+            color: #667eea;
+        }
+        .time-section {
+            margin-bottom: 10px;
+        }
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+        }
+        .time-label {
+            font-size: 12px;
+            color: #999;
+            font-weight: 500;
+        }
+        .time-value {
+            color: #333;
+            font-size: 15px;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+        .utc-badge {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .local-badge {
+            display: inline-block;
+            background: #f3e5f5;
+            color: #7b1fa2;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .time-diff-badge {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 10px;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+        }
+        .time-diff-badge i {
+            margin-right: 6px;
+            font-size: 16px;
+        }
+        .repo-url {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #495057;
+            word-break: break-all;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 15px;
+            display: block;
+            color: #ddd;
+        }
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .lang-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            margin-left: 5px;
+        }
+        .lang-btn:hover,
+        .lang-btn.active {
+            background: white;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="lang-switch">
+        <button class="lang-btn active" onclick="switchLang('zh')">中文</button>
+        <button class="lang-btn" onclick="switchLang('en')">English</button>
+        <button class="lang-btn" onclick="switchLang('ko')">한국어</button>
+        <button class="lang-btn" onclick="switchLang('fr')">Français</button>
+    </div>
+
+    <div class="layui-container" style="margin-top: 50px;">
+        <div class="layui-card">
+            <div class="layui-card-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 id="mainTitle" style="margin: 0;">GitWino - Git 仓库历史查询</h2>
+                    <a href="https://github.com/Maicarons/GitWino" target="_blank" rel="noopener noreferrer" 
+                       style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; transition: all 0.3s; display: inline-flex; align-items: center; margin-left: 15px;"
+                       onmouseover="this.style.background='rgba(255,255,255,0.3)'" 
+                       onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                        <i class="layui-icon layui-icon-github" style="font-size: 18px; margin-right: 6px;"></i>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+            <div class="layui-card-body">
+                <form class="layui-form" id="queryForm">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">仓库 URL</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="repo" placeholder="请输入 Git 仓库 URL，例如：https://github.com/go-git/go-git" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <button type="submit" class="layui-btn layui-btn-primary">
+                                <i class="layui-icon layui-icon-search"></i> 查询
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="result" style="margin-top: 20px;">
+                    <!-- 查询结果将显示在这里 -->
+                    <div class="empty-state">
+                        <i class="layui-icon layui-icon-chart"></i>
+                        <p>请输入仓库 URL 开始查询</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+</body>
+</html>
